@@ -1,4 +1,4 @@
-# TODO: collide-Funktionen bauen für alle; check_tetris überarbeiten
+# TODO: Vereinen auf eine Klasse; check_tetris überarbeiten
 
 import pygame
 import numpy as np
@@ -38,6 +38,7 @@ class Block:
         self.x = x
         self.y = y
         self.color = color
+        self.current = True
 
     def draw(self, window):
         if self.y >= 4:
@@ -57,9 +58,62 @@ class Block:
 
 
 class Shape:
-    def __init__(self, x, y):
+    offsets = {
+        "O": [[(0, 0), (1, 0), (0, 1), (1, 1)]],
+        "I": [
+            [(0, 0), (0, 1), (0, 2), (0, 3)],
+            [(-1, 1), (0, 1), (1, 1), (2, 1)],
+            [(1, 0), (1, 1), (1, 2), (1, 3)],
+            [(-1, 2), (0, 2), (1, 2), (2, 2)],
+        ],
+        "T": [
+            [(0, 0), (-1, 1), (0, 1), (1, 1)],
+            [(0, 0), (0, 1), (1, 1), (0, 2)],
+            [(0, 2), (-1, 1), (0, 1), (1, 1)],
+            [(0, 0), (0, 1), (-1, 1), (0, 2)],
+        ],
+        "Z": [
+            [(0, 0), (1, 0), (1, 1), (2, 1)],
+            [(2, 0), (1, 1), (2, 1), (1, 2)],
+            [(0, 1), (1, 1), (1, 2), (2, 2)],
+            [(1, 0), (1, 1), (0, 1), (0, 2)],
+        ],
+        "S": [
+            [(1, 0), (2, 0), (1, 1), (0, 1)],
+            [(1, 0), (1, 1), (2, 1), (2, 2)],
+            [(1, 1), (2, 1), (1, 2), (0, 2)],
+            [(0, 0), (0, 1), (1, 1), (1, 2)],
+        ],
+        "L": [
+            [(2, 0), (2, 1), (1, 1), (0, 1)],
+            [(1, 0), (1, 1), (1, 2), (2, 2)],
+            [(0, 1), (1, 1), (2, 1), (0, 2)],
+            [(0, 0), (1, 0), (1, 1), (1, 2)],
+        ],
+        "J": [
+            [(0, 0), (0, 1), (1, 1), (2, 1)],
+            [(1, 0), (2, 0), (1, 1), (1, 2)],
+            [(0, 1), (1, 1), (2, 1), (2, 2)],
+            [(1, 0), (1, 1), (1, 2), (0, 2)],
+        ],
+    }
+
+    colors = {
+        "O": "yellow",
+        "I": "cyan",
+        "T": "violet",
+        "Z": "red",
+        "S": "green",
+        "L": "orange",
+        "J": "blue",
+    }
+
+    def __init__(self, x, y, shape):
         self.x = x
         self.y = y
+        self.rotation = 0
+        self.type = shape
+        self.color = self.colors[self.type]
 
     def move_down(self):
         self.y += 1
@@ -70,171 +124,42 @@ class Shape:
     def move_right(self):
         self.x += 1
 
+    def rotate(self):
+        self.rotation += 1
+        self.rotation %= len(offsets[self.type])
 
-class O(Shape):
-    def __init__(self, x, y):
-        super().__init__(x, y)
-        self.color = "yellow"
-        self.height = 2
-        self.width = 2
+    def collide(self, grid, move_x, move_y):
+        collision = False
+        for i in range(4):
+            x = self.x - 1 + self.offsets[self.type][self.rotation][i][0] + move_x
+            y = self.y - 1 + self.offsets[self.type][self.rotation][i][1] + move_y
+            if y == Y_SIZE + 4:
+                collision = True
+            elif grid[y, x] != None:
+                if not grid[y, x].current:
+                    collision = True
+        return collision
 
     def make(self, grid):
-        grid[self.x - 1, self.y - 1] = Block(self.x - 1, self.y - 1, self.color)
-        grid[self.x, self.y - 1] = Block(self.x, self.y - 1, self.color)
-        grid[self.x - 1, self.y] = Block(self.x - 1, self.y, self.color)
-        grid[self.x, self.y] = Block(self.x, self.y, self.color)
+        for i in range(4):
+            x = self.x - 1 + self.offsets[self.type][self.rotation][i][0]
+            y = self.y - 1 + self.offsets[self.type][self.rotation][i][1]
+            grid[y, x] = Block(x, y, self.color)
         return grid
 
     def destroy(self, grid):
-        grid[self.x - 1, self.y - 1] = None
-        grid[self.x, self.y - 1] = None
-        grid[self.x - 1, self.y] = None
-        grid[self.x, self.y] = None
-        return grid
-
-    def collide(self, grid):
-        if (grid[self.x - 1, self.y + 1] != None) or (grid[self.x, self.y + 1] != None):
-            return True
-        return False
-
-
-class I(Shape):
-    def __init__(self, x, y):
-        super().__init__(x, y)
-        self.color = "blue"
-        self.height = 4
-        self.width = 1
-
-    def make(self, grid):
-        grid[self.x - 1, self.y - 1] = Block(self.x - 1, self.y - 1, self.color)
-        grid[self.x - 1, self.y] = Block(self.x - 1, self.y, self.color)
-        grid[self.x - 1, self.y + 1] = Block(self.x - 1, self.y + 1, self.color)
-        grid[self.x - 1, self.y + 2] = Block(self.x - 1, self.y + 2, self.color)
-        return grid
-
-    def destroy(self, grid):
-        grid[self.x - 1, self.y - 1] = None
-        grid[self.x - 1, self.y] = None
-        grid[self.x - 1, self.y + 1] = None
-        grid[self.x - 1, self.y + 2] = None
-        return grid
-
-
-class T(Shape):
-    def __init__(self, x, y):
-        super().__init__(x, y)
-        self.color = "magenta"
-        self.height = 2
-
-    def make(self, grid):
-        grid[self.x - 1, self.y - 1] = Block(self.x - 1, self.y - 1, self.color)
-        grid[self.x, self.y - 1] = Block(self.x, self.y - 1, self.color)
-        grid[self.x + 1, self.y - 1] = Block(self.x + 1, self.y - 1, self.color)
-        grid[self.x, self.y] = Block(self.x, self.y, self.color)
-        return grid
-
-    def destroy(self, grid):
-        grid[self.x - 1, self.y - 1] = None
-        grid[self.x, self.y - 1] = None
-        grid[self.x + 1, self.y - 1] = None
-        grid[self.x, self.y] = None
-        return grid
-
-
-class Z(Shape):
-    def __init__(self, x, y):
-        super().__init__(x, y)
-        self.color = "green"
-        self.height = 2
-
-    def make(self, grid):
-        grid[self.x - 1, self.y - 1] = Block(self.x - 1, self.y - 1, self.color)
-        grid[self.x, self.y - 1] = Block(self.x, self.y - 1, self.color)
-        grid[self.x, self.y] = Block(self.x, self.y, self.color)
-        grid[self.x + 1, self.y] = Block(self.x + 1, self.y, self.color)
-        return grid
-
-    def destroy(self, grid):
-        grid[self.x - 1, self.y - 1] = None
-        grid[self.x, self.y - 1] = None
-        grid[self.x, self.y] = None
-        grid[self.x + 1, self.y] = None
-        return grid
-
-
-class S(Shape):
-    def __init__(self, x, y):
-        super().__init__(x, y)
-        self.color = "red"
-        self.height = 2
-
-    def make(self, grid):
-        grid[self.x - 1, self.y - 1] = Block(self.x - 1, self.y - 1, self.color)
-        grid[self.x, self.y - 1] = Block(self.x, self.y - 1, self.color)
-        grid[self.x - 1, self.y] = Block(self.x - 1, self.y, self.color)
-        grid[self.x - 2, self.y] = Block(self.x - 2, self.y, self.color)
-        return grid
-
-    def destroy(self, grid):
-        grid[self.x - 1, self.y - 1] = None
-        grid[self.x, self.y - 1] = None
-        grid[self.x - 1, self.y] = None
-        grid[self.x - 2, self.y] = None
-        return grid
-
-
-class L(Shape):
-    def __init__(self, x, y):
-        super().__init__(x, y)
-        self.color = "orange"
-        self.height = 3
-
-    def make(self, grid):
-        grid[self.x - 1, self.y - 1] = Block(self.x - 1, self.y - 1, self.color)
-        grid[self.x - 1, self.y] = Block(self.x - 1, self.y, self.color)
-        grid[self.x - 1, self.y + 1] = Block(self.x - 1, self.y + 1, self.color)
-        grid[self.x, self.y + 1] = Block(self.x, self.y + 1, self.color)
-        return grid
-
-    def destroy(self, grid):
-        grid[self.x - 1, self.y - 1] = None
-        grid[self.x - 1, self.y] = None
-        grid[self.x - 1, self.y + 1] = None
-        grid[self.x, self.y + 1] = None
-        return grid
-
-
-class J(Shape):
-    def __init__(self, x, y):
-        super().__init__(x, y)
-        self.color = "pink"
-        self.height = 3
-
-    def make(self, grid):
-        grid[self.x - 1, self.y - 1] = Block(self.x - 1, self.y - 1, self.color)
-        grid[self.x - 1, self.y] = Block(self.x - 1, self.y, self.color)
-        grid[self.x - 1, self.y + 1] = Block(self.x - 1, self.y + 1, self.color)
-        grid[self.x - 2, self.y + 1] = Block(self.x - 2, self.y + 1, self.color)
-        return grid
-
-    def destroy(self, grid):
-        grid[self.x - 1, self.y - 1] = None
-        grid[self.x - 1, self.y] = None
-        grid[self.x - 1, self.y + 1] = None
-        grid[self.x - 2, self.y + 1] = None
+        for i in range(4):
+            x = self.x - 1 + self.offsets[self.type][self.rotation][i][0]
+            y = self.y - 1 + self.offsets[self.type][self.rotation][i][1]
+            grid[y, x] = None
         return grid
 
 
 def main():
     run = True
     draw_grid(WIN)
-    test_block = Block(3, 1, "pink")
-    test_block.draw(WIN)
-    test_block2 = Block(4, 1, "green")
-    test_block2.draw(WIN)
-    pygame.display.flip()
-    grid = np.full((X_SIZE, Y_SIZE + 4), None)
-    shapes = [O, I, T, Z, S, L, J]
+    grid = np.full((Y_SIZE + 5, X_SIZE), None)
+    shapes = ["O", "I", "T", "Z", "S", "L", "J"]
     queue = []
     points = 0
     moving = False
@@ -258,36 +183,19 @@ def main():
             current.move_right()
             grid = current.make(grid)
 
-        if (
-            moving
-            and current.y <= Y_SIZE + 4 - current.height
-            and not current.collide(grid)
-        ):
+        if moving and not current.collide(grid, 0, 1):
             grid = current.destroy(grid)
             current.move_down()
             grid = current.make(grid)
         else:
-            # current = queue.pop(0)(4, 1)
-            current = O(4, 1)
+            for y in grid:
+                for x in y:
+                    if x != None:
+                        x.current = False
+            current = Shape(4, 1, queue.pop(0))
+            # current = O(4, 1)
             grid = current.make(grid)
             moving = True
-
-        if current.y <= 4 - current.height:
-            if current.collide(grid):
-                print("Verloren!")
-                run = False
-
-        for y in range(Y_SIZE):
-            if check_tetris(y, grid):
-                points += 10
-                print(points)
-                for x in grid[:, y]:
-                    x = None
-                for i in range(y + 1, Y_SIZE):
-                    for j, x in enumerate(grid[:, i]):
-                        x.y -= 1
-                        grid[j, i - 1] = x
-                        grid[j, i] = None
 
         WIN.fill("white")
         draw_grid(WIN)
