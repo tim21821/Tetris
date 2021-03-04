@@ -1,4 +1,4 @@
-# TODO: Vereinen auf eine Klasse; check_tetris überarbeiten
+# TODO: check_tetris überarbeiten
 
 import pygame
 import numpy as np
@@ -52,9 +52,6 @@ class Block:
                     BLOCK_SIZE - 2,
                 ),
             )
-
-    def move_down(self):
-        self.y += 1
 
 
 class Shape:
@@ -126,14 +123,18 @@ class Shape:
 
     def rotate(self):
         self.rotation += 1
-        self.rotation %= len(offsets[self.type])
+        self.rotation %= len(self.offsets[self.type])
 
     def collide(self, grid, move_x, move_y):
         collision = False
         for i in range(4):
             x = self.x - 1 + self.offsets[self.type][self.rotation][i][0] + move_x
             y = self.y - 1 + self.offsets[self.type][self.rotation][i][1] + move_y
-            if y == Y_SIZE + 4:
+            if x < 0:
+                collision = True
+            elif x >= X_SIZE:
+                collision = True
+            elif y == Y_SIZE + 4:
                 collision = True
             elif grid[y, x] != None:
                 if not grid[y, x].current:
@@ -163,8 +164,11 @@ def main():
     queue = []
     points = 0
     moving = False
+    fps = 25
+    counter = 0
     while run:
-        clock.tick(5)
+        clock.tick(fps)
+        counter += 1
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
@@ -174,26 +178,34 @@ def main():
             queue = random.sample(shapes, len(shapes))
 
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT] and current.x > 1:
+        if keys[pygame.K_LEFT] and not current.collide(grid, -1, 0):
             grid = current.destroy(grid)
             current.move_left()
             grid = current.make(grid)
-        if keys[pygame.K_RIGHT] and current.x < X_SIZE - current.width + 1:
+        if keys[pygame.K_RIGHT] and not current.collide(grid, 1, 0):
             grid = current.destroy(grid)
             current.move_right()
             grid = current.make(grid)
-
-        if moving and not current.collide(grid, 0, 1):
+        if keys[pygame.K_UP] and not current.collide(grid, 0, 0):
+            grid = current.destroy(grid)
+            current.rotate()
+            grid = current.make(grid)
+        if keys[pygame.K_DOWN] and not current.collide(grid, 0, 1):
             grid = current.destroy(grid)
             current.move_down()
             grid = current.make(grid)
+
+        if moving and not current.collide(grid, 0, 1):
+            if counter % 5 == 0:
+                grid = current.destroy(grid)
+                current.move_down()
+                grid = current.make(grid)
         else:
             for y in grid:
                 for x in y:
                     if x != None:
                         x.current = False
             current = Shape(4, 1, queue.pop(0))
-            # current = O(4, 1)
             grid = current.make(grid)
             moving = True
 
