@@ -16,7 +16,7 @@ clock = pygame.time.Clock()
 
 
 def check_tetris(y, grid):
-    for x in grid[:, y]:
+    for x in grid[y]:
         if x == None:
             return False
     return True
@@ -141,6 +141,34 @@ class Shape:
                     collision = True
         return collision
 
+    def rot_collide(self, grid):
+        collision = False
+        for i in range(4):
+            x = (
+                self.x
+                - 1
+                + self.offsets[self.type][
+                    (self.rotation + 1) % len(self.offsets[self.type])
+                ][i][0]
+            )
+            y = (
+                self.y
+                - 1
+                + self.offsets[self.type][
+                    (self.rotation + 1) % len(self.offsets[self.type])
+                ][i][1]
+            )
+            if x < 0:
+                collision = True
+            elif x >= X_SIZE:
+                collision = True
+            elif y == Y_SIZE + 4:
+                collision = True
+            elif grid[y, x] != None:
+                if not grid[y, x].current:
+                    collision = True
+        return collision
+
     def make(self, grid):
         for i in range(4):
             x = self.x - 1 + self.offsets[self.type][self.rotation][i][0]
@@ -162,7 +190,7 @@ def main():
     grid = np.full((Y_SIZE + 5, X_SIZE), None)
     shapes = ["O", "I", "T", "Z", "S", "L", "J"]
     queue = []
-    points = 0
+    score = 0
     moving = False
     fps = 25
     counter = 0
@@ -186,7 +214,7 @@ def main():
             grid = current.destroy(grid)
             current.move_right()
             grid = current.make(grid)
-        if keys[pygame.K_UP] and not current.collide(grid, 0, 0):
+        if keys[pygame.K_UP] and not current.rot_collide(grid):
             grid = current.destroy(grid)
             current.rotate()
             grid = current.make(grid)
@@ -208,6 +236,13 @@ def main():
             current = Shape(4, 1, queue.pop(0))
             grid = current.make(grid)
             moving = True
+
+        for y in range(len(grid)):
+            if check_tetris(y, grid):
+                score += 10
+                print(score)
+                for x in grid[y]:
+                    x = None
 
         WIN.fill("white")
         draw_grid(WIN)
