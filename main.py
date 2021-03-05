@@ -1,5 +1,3 @@
-# TODO: Löschen bei Tetris fixen
-
 import pygame
 import numpy as np
 import random
@@ -15,7 +13,7 @@ pygame.display.set_caption("Tetris")
 clock = pygame.time.Clock()
 
 
-def check_tetris(y, grid):
+def check_tetris(grid, y):
     for x in grid[y]:
         if x == None:
             return False
@@ -23,8 +21,11 @@ def check_tetris(y, grid):
 
 
 def delete_line(grid, y):
-    for i in range(0, Y_SIZE + 4 - y):
+    for i in range(0, y):
         grid[y - i] = grid[y - i - 1]
+        for block in grid[y - i]:
+            if block != None:
+                block.y = y - i
     grid[0] = np.full(X_SIZE, None)
     return grid
 
@@ -206,8 +207,8 @@ def main():
         counter += 1
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                print(f"Du hast {score} Punkte erreicht!")
                 run = False
-                pygame.quit()
 
         if len(queue) == 0:
             queue = random.sample(shapes, len(shapes))
@@ -236,23 +237,31 @@ def main():
                 current.move_down()
                 grid = current.make(grid)
         else:
+            counter = 0
+            for i in range(len(grid)):
+                if check_tetris(grid, i):
+                    counter += 1
+                    grid = delete_line(grid, i)
+            if counter == 1:
+                score += 40
+            elif counter == 2:
+                score += 100
+            elif counter == 3:
+                score += 300
+            elif counter == 4:
+                score += 1200
+
             for y in grid:
                 for x in y:
                     if x != None:
                         x.current = False
+
             current = Shape(4, 1, queue.pop(0))
             if current.collide(grid, 0, 0):
-                print("Gameover!\n Du hast Punkte!")
+                print(f"Gameover!\n Du hast {score} Punkte!")
                 run = False
-                pygame.quit()
             grid = current.make(grid)
             moving = True
-
-        for y in range(len(grid)):
-            if check_tetris(y, grid):
-                score += 10
-                print(score)
-                grid = delete_line(grid, y)
 
         WIN.fill("white")
         draw_grid(WIN)
