@@ -1,4 +1,4 @@
-# TODO: check_tetris überarbeiten
+# TODO: Löschen bei Tetris fixen
 
 import pygame
 import numpy as np
@@ -20,6 +20,13 @@ def check_tetris(y, grid):
         if x == None:
             return False
     return True
+
+
+def delete_line(grid, y):
+    for i in range(0, Y_SIZE + 4 - y):
+        grid[y - i] = grid[y - i - 1]
+    grid[0] = np.full(X_SIZE, None)
+    return grid
 
 
 def draw_grid(window):
@@ -234,6 +241,10 @@ def main():
                     if x != None:
                         x.current = False
             current = Shape(4, 1, queue.pop(0))
+            if current.collide(grid, 0, 0):
+                print("Gameover!\n Du hast Punkte!")
+                run = False
+                pygame.quit()
             grid = current.make(grid)
             moving = True
 
@@ -241,8 +252,7 @@ def main():
             if check_tetris(y, grid):
                 score += 10
                 print(score)
-                for x in grid[y]:
-                    x = None
+                grid = delete_line(grid, y)
 
         WIN.fill("white")
         draw_grid(WIN)
